@@ -1,0 +1,256 @@
+//imports neccessary for the display
+#include <LiquidCrystal_I2C.h>
+using namespace std;
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+//define pins
+#define yellowButton 9
+#define greenButton 10
+#define blueButton 11
+#define startButton 12
+
+void setup() {
+  //initialize the display
+  lcd.init();
+  lcd.backlight();
+  lcd.begin(16, 2);
+
+  //input pins
+  pinMode(1, INPUT);
+  pinMode(2, INPUT);
+  pinMode(3, INPUT);
+  pinMode(4, INPUT);
+  pinMode(9, INPUT);
+  pinMode(10, INPUT);
+  pinMode(11, INPUT);
+  pinMode(12, INPUT);
+
+  //output pins
+  pinMode(3, OUTPUT);
+  pinMode(5, OUTPUT);
+  pinMode(6, OUTPUT);
+  pinMode(7, OUTPUT);
+}
+
+//flash the given led
+void setLED(int pin) {
+  //turn on the LED for the given index 
+  digitalWrite(pin, HIGH);
+}
+//clear the given led
+void clearLED(int pin) {
+  //turn off the LED for the given index 
+  digitalWrite(pin, LOW);
+}
+
+//send which button to check return if pressed 
+//return the result
+bool readButton(int button) {
+  //loop for time
+  return(digitalRead(button));
+}
+
+//check if the joystick is moved during the time given
+//return result
+bool readJoystick() {
+  
+  //check if the joystick is moved in any direction
+  if(analogRead(1)>600 || analogRead(1)<400 || analogRead(2)>600 || analogRead(2)<400)
+    return true;
+  else 
+    return false;
+}
+
+//check if the photo eye is covered
+bool readEye() {
+  return DigitalRead(4);
+ 
+}
+
+//return the value of the start game button
+bool startGame() {
+  return (digitalRead(startButton));
+}
+
+//display the message given and user score
+void DisplayString(String line, String line2) {
+  //clear the lcd
+  lcd.clear();
+  
+  //print out the first line
+  lcd.setCursor(0, 0);
+  lcd.print(line);
+
+  //print out the second line
+  lcd.setCursor(0, 1);
+  lcd.print(line2);
+}
+
+//main game loop
+void loop() {
+  //variable initialization
+  int score, highscore=0;
+  bool result;
+  String outputline;
+  bool win =1;
+
+  //infinte game loop
+  while (1) {
+
+    //intialize variables
+    score=0;
+    result=false;
+    win = true;
+
+    //startgame and display high score from last round if available
+    DisplayString("Press start game","High Score: "+String(highscore));
+    
+    //wait for the start game button to begin the game
+    while(startGame()==LOW)
+    {}    
+      
+    //loop for winning a round to keep game running
+    while(win==true)
+    {
+      //reset the time for new round
+      int time =0;
+
+      //pick a task  
+      DisplayString("Picking a task...","");
+      delay(1000);
+      int choice = random(0,2);
+
+      //display and switch to given input
+      DisplayString(String(choice),"");  
+      delay(1000);  
+      switch (choice)
+      {
+        //case 1 button press 
+        case 0:
+          //tell user the task
+          DisplayString("Task Selected:","Match Button");
+          delay(1000);  
+
+          //randomly pick an led to light and set the button that mathces it 
+          int led =random(5,8);  
+          int button;
+          if(led==7){button=yellowButton;}
+          if(led==6){button=greenButton;}
+          if(led==5){button=blueButton;}
+
+          //turn on the given led and delay 
+          setLED(led);
+          delay(1000);
+          
+          //wait for the user to press button within the time limit
+          while(time<10)
+            {
+              //display the time remaining
+              DisplayString("Match the LED","Time remaining "+String(9-time)); 
+
+              //check for the user input         
+              if(readButton(button))
+              {
+                result = true; 
+                break;                           
+              }
+
+              //no user input increase time passed and loop again
+              result=false;  
+              delay(500);
+              time++;       
+            }
+
+         //turn off LED
+         delay(1000);
+         clearLED(led);       
+         break;
+
+        //case 2 joystick input  
+        case 1:
+          //tell user the task
+          DisplayString("Task Selected:","Move Joystick");
+          delay(1000);  
+
+          //loop for given time waiting for input
+          while(time<10)
+            {
+              //display the time remaining and task
+              DisplayString("Move the Joystick","Time remaining "+String(9-time)); 
+
+              //check the input of the joystick, if input break out                      
+              if(readJoystick())
+              {
+                result = true; 
+                break;                           
+              }
+
+              //no input increase time passed and loop again
+              result=false;  
+              delay(500);
+              time++;       
+            }        
+          break;  
+
+
+        //case 3 photoeye    
+        case 2:
+          //tell user the task
+          DisplayString("Task Selected:","Cover sensor");
+          delay(1000);  
+
+          //loop for given time waiting for input
+          while(time<10)
+            {
+              //display the time remaining and task
+              DisplayString("Cover sensor","Time remaining "+String(9-time)); 
+
+              //check the input of the joystick, if input break out                      
+              if(readEye())
+              {
+                result = true; 
+                break;                           
+              }
+
+              //no input increase time passed and loop again
+              result=false;  
+              delay(500);
+              time++;       
+            }        
+          break;  
+      }  
+
+      //correct input
+      if(result)
+      {
+        //add to score and display if correct and loop
+        score++;
+        DisplayString("Correct!","Your score: "+String(score));
+        delay(4000);
+        win=true;
+      }
+      if(result && score==98)
+      {
+        DisplayString("You reach the end","You win!");
+        delay(4000);
+        win = false;
+        highscore=99;
+        break;
+
+      }
+      //incorrect input
+      else
+      {
+        //end game and display if incorrect 
+        DisplayString("Incorrect","Your score: "+String(score));
+        if(score>highscore)
+        {
+          highscore=score;
+        }
+        delay(4000);
+        win = false;
+        break;
+      }
+    }
+  }
+}
